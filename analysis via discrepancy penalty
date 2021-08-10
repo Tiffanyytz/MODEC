@@ -1,0 +1,82 @@
+#input: A-joint view, B-omic dataset
+#B will have larger dimension than A
+def mapping_omic(A, B):
+    nrow1 = A.shape[0]
+    ncol1 = A.shape[1]
+    nrow2 = B.shape[0]
+    ncol2 = B.shape[1]
+    M = np.zeros((nrow2, ncol2))
+    for i in range(nrow1):
+        for j in range(ncol1):
+            M[i][j] = 1
+    return M
+    
+    
+def objective(Um, shifted_L, Umbar, Mm):
+    O = np.trace(((Um.transpose()).dot(shifted_L)).dot(Um)) + np.trace(((Um.dot(Um.transpose())).dot(Umbar)).dot(Umbar.transpose())) -np.trace(((((Mm.transpose()).dot(Um)).dot(((Mm.transpose()).dot(Um)).transpose)).dot(Ujoint)).dot(Ujoint.transpose()))
+    return O
+    
+def MMMOC_optimization(X, Ujoint, K):
+    nrow_X = X.shape[0]
+    nrow_joint = Ujoint.shape[0]
+    Cm = mapping_omic(Ujoint, X)
+    sim = eclidean_similarity_scaled(X)
+    deg = degree(sim)
+    shifted_Ld = shifted_laplacian(deg, sim)
+    shifted_L = shifted_Ld.to_numpy()
+    list_of_L.append(shifted_L)
+    w, v = np.linalg.eig(shifted_L)
+    w[abs(w)<1e-10]=0
+    w = np.round(w, 10)
+    ln = len(w)
+    evind = [index for index,value in enumerate(w[0:rank]) if value!=2]
+    Um = v[:,evind]
+    Cm = mapping_omic(X, Ujoint)
+    #optimization initialization
+    u_w1, u_v1 = eigen_sort(Um)
+    Um = u_v1[:,0:K]
+    u_w2, u_v2 = eigen_sort(shifted_L)
+    Umbar = u_v2[:,0:K]
+    Sm = Um.dot(Um.transpose())
+    Sjoint = Ujoint.dot(Ujoint.transpose())
+    M = np.zeros((nrow_X, nrow_joint))
+    for i in range(nrow_joint):
+        for j in range(nrow_joint):
+            M[i][j] = 1
+    M_tilde = (Sm.dot(M)).dot(Sjoint)
+    u, s, vh = np.linalg.svd(M_tilde, full_matrices=True)
+    Mm = np.zeros((nrow_X, nrow_joint))
+    for i in range(s.shape[0]):
+        Mm[i][i] = s[i]
+    #initialization ends here
+    #optimization starts
+    t = 0
+    O = objective(Um, shifted_L, Umbar, Mm)
+    while np.linalg.norm(Mm) > 1e-16:
+        L_modified1 = shifted_L + Umbar.dot(Umbar.transpose())
+        u_w, u_v = eigen_sort(L_modified1)
+        UmTemp = u_v[:,0:K] 
+        L_modified2 = UmTemp.dot(UmTemp.transpose()) + ((Mm.dot(Ujoint)).dot(Ujoint.transpose())).dot(Mm.transpose())
+        u_w, u_v = eigen_sort(L_modified2)
+        UmbarTemp = u_v[:,0:K] 
+        SmTemp = UmTemp.dot(UmTemp.transpose())
+        M_tildeTemp = (SmTemp.dot(Mm)).dot(Sjoint)
+        MTemp = np.multiply(Cm, Mm) + np.multiply(1-Cm, M_tildeTemp)
+        OTemp = objective(UmTemp, shifted_L, UmbarTemp, MTemp)
+        if OTemp - O > 1e-13:
+            t = t+1
+            Um = UmTemp
+            Umbar = UmbarTemp
+            Mm = MTemp
+            O = OTemp
+    return Umbar
+    
+
+def MMMOC(Data, list_ck, Ujoint):
+    N = len(Data)
+    list_of_Ubar = []
+    for i in range(N):
+        Datai = Data[i].drop(['sample'],axis=1)
+        list_of_Ubar.append(MMMOC_optimization(Datai, Ujoint, list_ck[i]))
+    return list_of_Ubar
+    
