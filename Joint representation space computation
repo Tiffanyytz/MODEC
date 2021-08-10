@@ -1,0 +1,243 @@
+import random
+import pandas as pd
+import numpy as np
+import math
+from scipy.spatial.distance import euclidean, pdist, squareform
+from numpy import linalg
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_samples, silhouette_score
+from scipy.linalg import expm, sinm, cosm
+
+def graph_laplacian(data):
+    #s = max(pdist(data))
+    s = 1000
+    dim = data.shape[0]
+    H = np.zeros([dim, dim])
+    for i in range(dim):
+        for j in range(i+1):
+            w = data[i]-data[j]
+            H[i][j] = H[j][i] = np.exp(-sum(w*w)/(2*s*s))
+    Dm = H.sum(axis=1)
+    Dh = np.diag(Dm**-0.5)
+    I = np.identity(dim)
+    Lm = I + Dh@H@Dh
+    return H, Lm
+    
+    def negative_entry_matrix(A):
+    D = np.zeros([A.shape[0], A.shape[1]])
+    for i in range(A.shape[0]):
+        for j in range(A.shape[1]):
+            if A[i,j]<0:
+                D[i,j] = A[i,j]
+    return D
+    
+#input: joint laplacian L, U_joint of iteration t, step length m, parameter n
+#output: U_joint of iterate t+1, Qt
+def minimize_kmeans(L, Ut, m, n):
+    r = Ut.shape[0]
+    c = Ut.shape[1]
+    Ut_neg = negative_entry_matrix(Ut)
+    Qt = L.dot(Ut) - n*Ut_neg
+    one = np.ones([r,r])
+    X = (1/r)*((Qt.dot(Ut.transpose())).dot(one))
+    X1 = X.dot(one.transpose()) + one.dot(X.transpose())
+    WY = (Qt.transpose()).dot(Ut) + (Ut.transpose()).dot(Qt)
+    omega = (1/4)*(WY - 2*(((Ut.transpose()).dot(X1)).dot(Ut)))
+    Zt = Qt - 2*(Ut.dot(omega)) - X1.dot(Ut)
+    Zt1 = Ut + (m*Zt) #returns Z(t+1)
+    A = (Ut.transpose()).dot(Zt1) #gets Q
+    A1 = (Ut.dot(A)).dot(Ut.transpose()) #returns Q'
+    B = Zt1.dot(Ut.transpose()) - Ut.dot(Zt1.transpose()) - 2*A1
+    #Ut1R = ((np.exp(B)).dot(np.exp(A1))).dot(Ut)
+    Ut1R = ((expm(B)).dot(expm(A1))).dot(Ut)
+    Ut1R = np.asmatrix(Ut1R)
+    Ut1 = Ut1R
+    return Ut1, Qt
+    
+    
+#we can convert the objective to a maximization problem.
+#input:r rank Laplacian L, Uj of iterate t, step length m
+#output: Uj of iterate t+1
+def maximize_stiefel(L, Ut, m):
+    r = Ut.shape[0]
+    c = Ut.shape[1]
+    Qt = L.dot(Ut)
+    Zt = (np.identity(r) - Ut.dot(Ut.transpose())).dot(Qt)
+    Zt1 = Ut + (m*Zt)
+    #obj = (Zt1.transpose()).dot(Qt)
+    u, s, vh = linalg.svd (Zt1, full_matrices=True)
+    Ut1R = (u[:,0:c]).dot(vh[:,0:c])
+    Ut1 = Ut1R
+    return Ut1
+    
+    
+def silhouette(M, km):
+    score = silhouette_score(M, km.labels_, metric='euclidean')
+    return score
+
+def silhouette(M, km):
+    score = silhouette_score(M, km.labels_, metric='euclidean')
+    return score
+    
+def joint_kernel(U):
+    jointkernel = U.dot(U.transpose())
+    return jointkernel
+    
+# n is the number of samples in the input
+# Urestlist is a list of r rank Ui
+def sum_kernel(Urestlist, n):
+    sumkernel = np.zeros([n,n])
+    for i in range(len(Urestlist)):
+        sumkernel = sumkernel + Urestlist[i].dot(
+            Urestlist[i].transpose())
+    return sumkernel
+    
+def check_majority(M):
+    for i in range(M.shape[1]):
+        neg_count = len(list(filter(lambda x: (x < 0), M[:,i])))
+        if neg_count > (M.shape[0]-neg_count):
+            M[:,i] = -M[:,i]
+    return M
+    
+#function to get sorted eigen_decomposition
+def eigen_sort(A):
+    eigenValues, eigenVectors = linalg.eig(A)
+    #eigenValues = eigenValues.real
+    #eigenVectors = eigenVectors.real
+    idx = eigenValues.argsort()[::-1]  
+    eigenValues = eigenValues[idx].real.astype(np.float32)
+    eigenVectors = eigenVectors[:,idx].real.astype(np.float32)
+    return eigenValues, eigenVectors
+    
+    
+def joint_view_fixedrank(Data, K, rank):
+    random.seed(2)
+    epsilon = 1e-03
+    alphav = 0.05
+    maxiter = 100
+    lbd = 0.01
+    beta = 0.5
+    dfEpsilon = 0.005
+    sigma_d = 1e-05
+    dampF = 2
+    startrank = K
+    #maxRk = 50
+    M = len(Data)
+    dK = min(K, rank)
+    n = Data[0].shape[0]
+    list_of_L = []
+    list_of_Um = []
+    list_of_Lmr = []
+    list_of_chi = []
+    for i in range(M):
+        sim, shifted_L = graph_laplacian(Data[i])
+        list_of_L.append(shifted_L)
+        w, v = eigen_sort(shifted_L)
+        w[abs(w)<1e-10]=0
+        w = np.round(w, 10)
+        ln = len(w)
+        #use ind to get the second largest eigenpairs
+        ind = 1
+        evind = [index for index,value in enumerate(w[0:rank]) if value!=2]
+        Um = v[:,evind]
+        Dm = w[evind]
+        Dmat = v[:,ind:(ind+1)]
+        kmeans = KMeans(n_clusters=2, max_iter=100, n_init = 100).fit(Dmat)
+        chi = (w[ind]*(1+silhouette(Dmat, kmeans)))*0.25
+        Lmr = (Um.dot(np.diag(Dm))).dot(Um.transpose())
+        list_of_Um.append(Um)
+        list_of_Lmr.append(Lmr)
+        list_of_chi.append(chi)
+    #above preparation completed
+    #construct the joint laplacian
+    #alphaWW = [0]*len(list_of_chi)
+    alphaWW = [0]*M
+    order = np.argsort(list_of_chi) [::-1] 
+    for i in range(len(alphaWW)):
+        alphaWW[order[i]] = list_of_chi[order[i]]*(1/pow(2,i+1))
+        alphaW = [x / sum(alphaWW) for x in alphaWW]
+    #above alphaW store the weights alpha
+    #n is the number of samples
+    Ljoint = np.zeros((n, n))
+    for m in range(M):
+        Ljoint = Ljoint + alphaW[i]*list_of_Lmr[i]
+    alpha = alphav
+    Rest = np.linspace(start=0, stop=M-1, num=M, dtype=int)
+    Best = order[0]
+    u_w, u_v = eigen_sort(Ljoint)
+    Ujoint = u_v[:,0:rank]
+    list_of_Ur = []
+    list_of_Lr = []
+    list_UrTemp = []
+    fprev = 0
+    for i in range(M):
+        list_of_Ur.append(list_of_Um[Rest[i]])
+        list_of_Lr.append(list_of_Lmr[Rest[i]])
+    JointKernel = joint_kernel(Ujoint)
+    SumKernel = sum_kernel(list_of_Ur, n)
+    #above has no dimension problem
+    Ujoint = check_majority(Ujoint)
+    fclust = -sum(np.diag(((Ujoint.transpose()).dot(Ljoint)).dot(Ujoint)))
+    fclust = fclust/(2*rank)
+    Ujointneg = negative_entry_matrix(Ujoint)/2
+    fdag = 0
+    f = fclust+fdag
+    fprev = f
+    #initialization ends
+    t = 0
+    while alpha > 1e-03:
+        UjointTemp, kmoptQt = minimize_kmeans(SumKernel+Ljoint, 
+                                              Ujoint, alpha, lbd)
+        fclust = -sum(np.diag(((UjointTemp.transpose()).dot(Ljoint)).dot(UjointTemp)))
+        Ujointneg = negative_entry_matrix(UjointTemp)/2
+        fclust = fclust/(2*rank)
+        JointKernel = joint_kernel(UjointTemp)
+        fdag = 0
+        for i in range(M):
+            list_UrTemp.append(maximize_stiefel((list_of_Lr[i]+JointKernel), 
+                               list_of_Ur[i], alpha))
+            fdag = fdag - sum(np.diag(((list_of_Ur[i].transpose()).dot(list_of_Lr[i]+JointKernel)).dot(list_of_Ur[i])))
+        fdag = fdag/(2*rank*M)
+        f = fclust + fdag
+        df = fprev - f
+        Ca = df - sigma_d*alpha*sum(np.diag((kmoptQt.transpose()).dot(kmoptQt)))
+        if df >= dfEpsilon and Ca >= 0:
+            t = t+1
+            Ujoint = UjointTemp
+            for i in range(M):
+                list_of_Ur[i] = list_UrTemp[i]
+            SumKernel = sum_kernel(list_of_Ur, n)
+            fprev = f
+        else:
+            #if the optimization result isn't significant, reduce the step length.
+            alpha = beta*alpha
+    km = KMeans(n_clusters=K, max_iter=100, n_init=100).fit(Ujoint[:,0:dK])
+    sil = silhouette(Ujoint[:,0:dK], km)
+    #if sil > silOpt:
+        #print(sil)
+        #UjointOpt = Ujoint
+        #silOpt = sil
+        #rstar = rank
+    return UjointOpt, sil, rank
+    
+#input: omics_data, starting rank K (number of clusters)
+#use a loop to decide the optimal rank
+def joint_view_optimize(data, K):
+    UjointOpt = None
+    silOpt = -math.inf
+    max_rank = 20
+    list_of_UjointOpt = []
+    list_of_silOpt = []
+    list_of_rstar = []
+    rankchoice = np.linspace(start=K, stop=max_rank, num=max_rank-K+1, dtype=int)
+    for i in range(len(rankchoice)):
+        rank = rankchoice[i]
+        #silOpt = list_of_silOpt[i]
+        #UjointOpt = list_of_UjointOpt[i]
+        UjointOpt, silOpt, rstar = joint_view_fixedrank(data, K, rank)
+        list_of_UjointOpt.append(UjointOpt)
+        list_of_silOpt.append(silOpt)
+        list_of_rstar.append(rstar)
+    #list_of_silOpt.pop(0)
+    #list_of_UjointOpt.pop(0)
+    return list_of_UjointOpt, list_of_silOpt, list_of_rstar
