@@ -218,7 +218,7 @@ def joint_view_fixedrank(Data, K, rank):
         #UjointOpt = Ujoint
         #silOpt = sil
         #rstar = rank
-    return UjointOpt, sil, rank
+    return Ujoint, sil, rank
     
 #input: omics_data, starting rank K (number of clusters)
 #use a loop to decide the optimal rank
