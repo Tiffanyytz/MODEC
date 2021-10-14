@@ -1,0 +1,173 @@
+from keras.wrappers.scikit_learn import KerasRegressor
+import numpy as np
+float_formatter = lambda x: "%.3f" % x
+np.set_printoptions(formatter={'float_kind':float_formatter})
+from sklearn.datasets.samples_generator import make_circles
+from sklearn.cluster import SpectralClustering, KMeans
+from sklearn.metrics import pairwise_distances
+from matplotlib import pyplot as plt
+import networkx as nx
+import seaborn as sns
+sns.set()
+from sklearn.decomposition import PCA
+import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_samples, silhouette_score
+from scipy import stats
+from sklearn.ensemble import RandomForestRegressor
+from tensorflow import keras
+from sklearn.model_selection import train_test_split
+import math
+import pandas as pd
+import tensorflow as tf
+import matplotlib.pyplot as plt
+from tensorflow.keras import Model
+from tensorflow.keras import Sequential
+from sklearn.preprocessing import StandardScaler
+from tensorflow.keras.layers import Dense, Dropout
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.losses import MeanSquaredLogarithmicError
+from sklearn.neural_network import MLPRegressor
+import keras
+from keras import layers
+import keras.backend as K
+
+for num_clusters in range(2,10):
+    clusterer = KMeans(n_clusters=num_clusters, n_jobs=4)
+    preds = clusterer.fit_predict(df_merge50)
+    # centers = clusterer.cluster_centers_
+    score = silhouette_score (df_merge50, preds, metric='euclidean')
+    print ("For n_clusters = {}, Kmeans silhouette score is {})".format(num_clusters, score))
+    
+n_clusters = 3
+kmeans = KMeans(n_clusters=n_clusters, n_jobs=4)
+y_pred_kmeans = kmeans.fit_predict(df_merge50)
+
+def autoencoder(dims, act='relu', init='glorot_uniform'):
+    n_stacks = len(dims) - 1
+    
+    input_data = keras.Input(shape=(dims[0],), name='input')
+    x = input_data
+    
+    # internal layers of encoder
+    for i in range(n_stacks-1):
+        x = layers.Dense(dims[i + 1], activation=act,  kernel_initializer=init, name='encoder_%d' % i)(x)
+    # latent hidden layer
+    encoded = layers.Dense(dims[-1], kernel_initializer=init, name='encoder_%d' % (n_stacks - 1))(x)
+    x = encoded
+    # internal layers of decoder
+    for i in range(n_stacks-1, 0, -1):
+        x = layers.Dense(dims[i], activation=act, kernel_initializer=init, name='decoder_%d' % i)(x)
+    # decoder output
+    x = layers.Dense(dims[0], kernel_initializer=init, name='decoder_0')(x)
+    
+    decoded = x
+    
+    autoencoder_model = keras.Model(inputs=input_data, outputs=decoded, name='autoencoder')
+    encoder_model     = keras.Model(inputs=input_data, outputs=encoded, name='encoder')
+    
+    return autoencoder_model, encoder_model
+    
+ n_epochs   = 100
+batch_size = 128
+dims = [df_merge50.shape[-1], 60, 30, 25] 
+init = tf.keras.initializers.VarianceScaling(scale=1. / 3., mode='fan_in',
+                           distribution='uniform')
+pretrain_optimizer = tf.keras.optimizers.SGD(lr=1, momentum=0.9)
+pretrain_epochs = n_epochs
+batch_size = batch_size
+save_dir = './results'
+autoencoder, encoder = autoencoder(dims, init=init)
+
+
+#from tf.keras.utils import plot_model
+tf.keras.utils.plot_model(encoder, to_file='encoder.png', show_shapes=True)
+#from IPython.display import Image
+#Image(filename='encoder.png')
+
+autoencoder.save_weights('/drive/My Drive/datasets/ae_weights.h5')
+autoencoder.load_weights('/drive/My Drive/datasets/ae_weights.h5')
+
+class ClusteringLayer(keras.layers.Layer):
+    def __init__(self, n_clusters, weights=None, alpha=1.0, **kwargs):
+        if 'input_shape' not in kwargs and 'input_dim' in kwargs:
+            kwargs['input_shape'] = (kwargs.pop('input_dim'),)
+        super(ClusteringLayer, self).__init__(**kwargs)
+        self.n_clusters = n_clusters
+        self.alpha = alpha
+        self.initial_weights = weights
+        self.input_spec = tf.keras.layers.InputSpec(ndim=2)
+    def build(self, input_shape):
+        assert len(input_shape) == 2
+        input_dim = input_shape[1]
+        self.input_spec = tf.keras.layers.InputSpec(dtype=K.floatx(), shape=(None, input_dim))
+        self.clusters = self.add_weight(name='clusters', shape=(self.n_clusters, input_dim), initializer='glorot_uniform') 
+        
+        if self.initial_weights is not None:
+            self.set_weights(self.initial_weights)
+            del self.initial_weights
+        self.built = True
+    def call(self, inputs, **kwargs):
+        q = 1.0 / (1.0 + (K.sum(K.square(K.expand_dims(inputs, axis=1) - self.clusters), axis=2) / self.alpha))
+        q **= (self.alpha + 1.0) / 2.0
+        q = K.transpose(K.transpose(q) / K.sum(q, axis=1)) 
+        
+        return q
+    def compute_output_shape(self, input_shape):
+        assert input_shape and len(input_shape) == 2
+        return input_shape[0], self.n_clusters
+    def get_config(self):
+        config = {'n_clusters': self.n_clusters}
+        base_config = super(ClusteringLayer, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
+clustering_layer = ClusteringLayer(n_clusters, name='clustering')(encoder.output)
+#clustering_layer = ClusteringLayer(n_clusters)(encoder.output)
+model = Model(inputs=encoder.input, outputs=clustering_layer)
+
+tf.keras.utils.plot_model(model, to_file='model.png', show_shapes=True)
+
+kmeans = KMeans(n_clusters=n_clusters, n_init=20)
+y_pred = kmeans.fit_predict(encoder.predict(df_merge50))
+y_pred_last = np.copy(y_pred)
+
+model.compile(optimizer=tf.keras.optimizers.SGD(0.01, 0.9), loss='kld')
+model.get_layer(name='clustering').set_weights([kmeans.cluster_centers_])
+
+# computing an auxiliary target distribution
+def target_distribution(q):
+    weight = q ** 2 / q.sum(0)
+    return (weight.T / weight.sum(1)).T
+
+loss = 0
+index = 0
+maxiter = 1000
+update_interval = 10
+tol = 0.001 
+# tolerance threshold to stop training
+index_array = np.arange(x.shape[0])
+
+for ite in range(int(maxiter)):
+    if ite % update_interval == 0:
+        q = model.predict(x, verbose=0)
+        p = target_distribution(q)  
+    idx = index_array[index * batch_size: min((index+1) * batch_size, x.shape[0])]
+    loss = model.train_on_batch(x=x.iloc[idx], y=p[idx])
+    index = index + 1 if (index + 1) * batch_size <= x.shape[0] else 0
+
+model.save_weights('/drive/My Drive/datasets/DEC_model_final.h5')
+model.load_weights('/drive/My Drive/datasets/DEC_model_final.h5')
+
+q = model.predict(x, verbose=0)
+p = target_distribution(q) 
+y_pred = q.argmax(1)
+
+import numpy as np
+from sklearn.manifold import TSNE
+x_embedded = TSNE(n_components=2).fit_transform(x)
+vis_x = x_embedded[:, 0]
+vis_y = x_embedded[:, 1]
+plt.scatter(vis_x, vis_y, c=y_pred, cmap=plt.cm.get_cmap("jet", 256))
+plt.colorbar(ticks=range(256))
+plt.clim(-0.5, 9.5)
+plt.show()
