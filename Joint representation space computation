@@ -220,24 +220,3 @@ def joint_view_fixedrank(Data, K, rank):
         #rstar = rank
     return Ujoint, sil, rank
     
-#input: omics_data, starting rank K (number of clusters)
-#use a loop to decide the optimal rank
-def joint_view_optimize(data, K):
-    UjointOpt = None
-    silOpt = -math.inf
-    max_rank = 20
-    list_of_UjointOpt = []
-    list_of_silOpt = []
-    list_of_rstar = []
-    rankchoice = np.linspace(start=K, stop=max_rank, num=max_rank-K+1, dtype=int)
-    for i in range(len(rankchoice)):
-        rank = rankchoice[i]
-        #silOpt = list_of_silOpt[i]
-        #UjointOpt = list_of_UjointOpt[i]
-        UjointOpt, silOpt, rstar = joint_view_fixedrank(data, K, rank)
-        list_of_UjointOpt.append(UjointOpt)
-        list_of_silOpt.append(silOpt)
-        list_of_rstar.append(rstar)
-    #list_of_silOpt.pop(0)
-    #list_of_UjointOpt.pop(0)
-    return list_of_UjointOpt, list_of_silOpt, list_of_rstar
