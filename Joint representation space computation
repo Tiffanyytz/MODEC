@@ -23,7 +23,7 @@ def graph_laplacian(data):
     Lm = I + Dh@H@Dh
     return H, Lm
     
-    def negative_entry_matrix(A):
+def negative_entry_matrix(A):
     D = np.zeros([A.shape[0], A.shape[1]])
     for i in range(A.shape[0]):
         for j in range(A.shape[1]):
