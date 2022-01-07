@@ -1,0 +1,47 @@
+#Using LGGs for instance
+import numpy as np
+from sklearn.manifold import TSNE
+from scipy.spatial import ConvexHull
+from scipy import interpolate
+x_embedded = TSNE(n_components=2, verbose=0, perplexity=40, n_iter=300).fit_transform(x)
+vis_x = x_embedded[:, 0]
+vis_y = x_embedded[:, 1]
+df_subset = pd.DataFrame()
+df_subset['tsne-2d-one'] = vis_x
+df_subset['tsne-2d-two'] = vis_y
+df_subset['label'] = y_pred
+plt.figure(figsize=(12,8))
+sns.set_style("whitegrid")
+sns.scatterplot(
+    x="tsne-2d-one", y="tsne-2d-two",
+    hue=y_pred,
+    #style=y_pred,
+    size=y_pred,
+    sizes=(20, 80),
+    #palette=sns.color_palette("hls", 10),
+    #hue_norm=(0, 7),
+    palette=sns.color_palette("hls",3),
+    edgecolors= "b",
+    data=df_subset,
+    legend="full",
+    alpha=0.7
+)
+for i in df_subset['label'].unique():
+    # get the convex hull
+    points = df_subset[df_subset['label'] == i][['tsne-2d-one', 'tsne-2d-two']].values
+    hull = ConvexHull(points)
+    x_hull = np.append(points[hull.vertices,0],
+                       points[hull.vertices,0][0])
+    y_hull = np.append(points[hull.vertices,1],
+                       points[hull.vertices,1][0])
+    
+    # interpolate
+    dist = np.sqrt((x_hull[:-1] - x_hull[1:])**2 + (y_hull[:-1] - y_hull[1:])**2)
+    dist_along = np.concatenate(([0], dist.cumsum()))
+    spline, u = interpolate.splprep([x_hull, y_hull], 
+                                    u=dist_along, s=0)
+    interp_d = np.linspace(dist_along[0], dist_along[-1], 50)
+    interp_x, interp_y = interpolate.splev(interp_d, spline)
+    # plot shape
+    colors = ['#ffff33', '#f781bf', '#2095DF', '#FF4500', '#A0522D']
+    plt.fill(interp_x, interp_y, '--', c=colors[i], alpha=0.3)
