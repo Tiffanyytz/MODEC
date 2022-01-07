@@ -32,6 +32,8 @@ import keras
 from keras import layers
 import keras.backend as K
 
+#Using LGGs data for example
+#the number of clusters is decided based on this selection and prior knowledge.
 for num_clusters in range(2,10):
     clusterer = KMeans(n_clusters=num_clusters, n_jobs=4)
     preds = clusterer.fit_predict(df_merge50)
@@ -161,13 +163,3 @@ model.load_weights('/drive/My Drive/datasets/DEC_model_final.h5')
 q = model.predict(x, verbose=0)
 p = target_distribution(q) 
 y_pred = q.argmax(1)
-
-import numpy as np
-from sklearn.manifold import TSNE
-x_embedded = TSNE(n_components=2).fit_transform(x)
-vis_x = x_embedded[:, 0]
-vis_y = x_embedded[:, 1]
-plt.scatter(vis_x, vis_y, c=y_pred, cmap=plt.cm.get_cmap("jet", 256))
-plt.colorbar(ticks=range(256))
-plt.clim(-0.5, 9.5)
-plt.show()
