@@ -14,7 +14,7 @@ MODEC is an integrative clustering method utilizing gene-level omics data and cl
    
 5. Input data format and example code for joint representation subspace calculation
 
-   Use STAD cohort for instance. First read in omics data as Data_stad1, Data_stad2, Data_stad3. After selecting the same samples in all the datasets, drop nan value and prepare the datasets with columns as markers while rows corresponding to samples, we generate a list including these omics datasets as:
+   Use STAD cohort for instance. First read in omics data as Data_stad1, Data_stad2, Data_stad3. After selecting the same samples in all the datasets, drop nan value, normalize datasets and prepare the datasets with columns as markers while rows corresponding to samples, we generate a list including these omics datasets as:
    
    Data_stad_test_gene_protein_miRNA_mDNA = [Data_stad1, Data_stad2, Data_stad3]
   
@@ -22,4 +22,6 @@ MODEC is an integrative clustering method utilizing gene-level omics data and cl
    
    Ujoint, sil, rank = joint_view_fixedrank(Data_stad_test_gene_protein_miRNA_mDNA, k,r)
    
-6. Input data for DEC: using combination of joint subspace from joint representation subspace calculation and preprocessed clinical data.
+6. Input data for DEC: using combination of joint subspace from joint representation subspace calculation and preprocessed clinical data. For example, try to use STAD_rank20_joint.txt and STAD_clinical_dummycomputed.csv. Combine the datasets with columns as markers while rows corresponding to samples.
+
+7. Output format: the output from MODEC will be clustering labels as numbers. We can map them to the subtype contained in the PAM50 dataset to measure the clustering performance. The optimal matching is obtained by applying Hungarian method.
