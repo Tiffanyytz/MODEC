@@ -20,6 +20,6 @@ MODEC is an integrative clustering method utilizing gene-level omics data and cl
   
    Given customized rank r and number of clusters k (using k we can get a silhouette score by applying k-means clustering). Please make sure r is greater or equal to k. We can get the joint subspace, silhouette score and corresponding rank as outputs.
    
-   UjointOpt, silOpt, rstar = joint_view_fixedrank(Data_stad_test_gene_protein_miRNA_mDNA, k,r)
+   Ujoint, sil, rank = joint_view_fixedrank(Data_stad_test_gene_protein_miRNA_mDNA, k,r)
    
 6. Input data for DEC: using combination of joint subspace from joint representation subspace calculation and preprocessed clinical data.
