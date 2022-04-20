@@ -1,5 +1,5 @@
 # MODEC
-MODEC is an integrative clustering method utilizing gene-level omics data and clinical features for cancer subtype identification. It comprehensively uses Manifold Learning and Deep Embedded Clustering, and simultaneously takes clinical features into consideration.
+MODEC is an integrative clustering method utilizing gene-level omics data for cancer subtype identification. It comprehensively uses Manifold Learning and Deep Embedded Clustering, and simultaneously takes clinical significance into consideration. MODEC subtypes are very competitive both for arrucate clustering ang clinical significant difference identification, which will be helpful in real world.
 
 1. Joint representation space computation algorithm can be used to calculate a fixed rank joint subspace from omics data. The rank and number of omics data types can be customarized.
 
