@@ -72,7 +72,8 @@ def autoencoder(dims, act='relu', init='glorot_uniform'):
     
  n_epochs   = 100
 batch_size = 128
-dims = [df_merge50.shape[-1], 60, 30, 25] 
+#We use autoencoder to initialize the clustering process
+dims = [df_merge50.shape[-1]] 
 init = tf.keras.initializers.VarianceScaling(scale=1. / 3., mode='fan_in',
                            distribution='uniform')
 pretrain_optimizer = tf.keras.optimizers.SGD(lr=1, momentum=0.9)
