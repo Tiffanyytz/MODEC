@@ -38,7 +38,7 @@ def minimize_kmeans(L, Ut, m, n):
     c = Ut.shape[1]
     Ut_neg = negative_entry_matrix(Ut)
     Qt = L.dot(Ut) - n*Ut_neg
-    one = np.ones([r,r])
+    one = np.ones([r,1])
     X = (1/r)*((Qt.dot(Ut.transpose())).dot(one))
     X1 = X.dot(one.transpose()) + one.dot(X.transpose())
     WY = (Qt.transpose()).dot(Ut) + (Ut.transpose()).dot(Qt)
