@@ -30,25 +30,28 @@ def negative_entry_matrix(A):
             if A[i,j]<0:
                 D[i,j] = A[i,j]
     return D
-    
+
 #input: joint laplacian L, U_joint of iteration t, step length m, parameter n
 #output: U_joint of iterate t+1, Qt
+#need to fix float infinity problem
 def minimize_kmeans(L, Ut, m, n):
     r = Ut.shape[0]
     c = Ut.shape[1]
     Ut_neg = negative_entry_matrix(Ut)
-    Qt = L.dot(Ut) - n*Ut_neg
-    one = np.ones([r,1])
-    X = (1/r)*((Qt.dot(Ut.transpose())).dot(one))
+    Qt = L.dot(Ut) - n * Ut_neg
+    # one = np.ones([r, r])
+    one = np.ones([r, 1])
+    X = (1 / r) * ((Qt.dot(Ut.transpose())).dot(one))
     X1 = X.dot(one.transpose()) + one.dot(X.transpose())
     WY = (Qt.transpose()).dot(Ut) + (Ut.transpose()).dot(Qt)
-    omega = (1/4)*(WY - 2*(((Ut.transpose()).dot(X1)).dot(Ut)))
-    Zt = Qt - 2*(Ut.dot(omega)) - X1.dot(Ut)
-    Zt1 = Ut + (m*Zt) #returns Z(t+1)
-    A = (Ut.transpose()).dot(Zt1) #gets Q
-    A1 = (Ut.dot(A)).dot(Ut.transpose()) #returns Q'
-    B = Zt1.dot(Ut.transpose()) - Ut.dot(Zt1.transpose()) - 2*A1
-    #Ut1R = ((np.exp(B)).dot(np.exp(A1))).dot(Ut)
+    omega = (1 / 4) * (WY - 2 * (((Ut.transpose()).dot(X1)).dot(Ut)))
+    Zt = Qt - 2 * (Ut.dot(omega)) - X1.dot(Ut)
+    #Zt1 = Ut + (m * Zt)  # returns Z(t+1)
+    Zt1 = m * Zt
+    A = (Ut.transpose()).dot(Zt1)  # gets Q
+    A1 = (Ut.dot(A)).dot(Ut.transpose())  # returns Q'
+    B = Zt1.dot(Ut.transpose()) - Ut.dot(Zt1.transpose()) - 2 * A1
+    # Ut1R = ((np.exp(B)).dot(np.exp(A1))).dot(Ut)
     Ut1R = ((expm(B)).dot(expm(A1))).dot(Ut)
     Ut1R = np.asmatrix(Ut1R)
     Ut1 = Ut1R
