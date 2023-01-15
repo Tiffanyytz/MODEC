@@ -39,3 +39,5 @@ MODEC is an integrative clustering method utilizing gene-level omics data for ca
 7. Output format: the output from MODEC will be clustering labels as numbers. We can map them to the subtype contained in the TCGA dataset to measure the clustering performance. The optimal matching is obtained by applying Hungarian method. The mapping algorithm is provided in the application example using BRCA cohort.
 
 8. We use clinical matrix from TCGA database for survival and enrichment tests. We use several keywords to filter the features for this part.
+
+This work has been published in Briefings in Bioinformatics, https://doi.org/10.1093/bib/bbac372.
