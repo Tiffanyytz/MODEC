@@ -34,7 +34,7 @@ MODEC is an integrative clustering method utilizing gene-level omics data for ca
    
    Ujoint, sil, rank = joint_view_fixedrank(Data_brca_list, k,r)
    
-6. Input data for DEC: using combination of joint subspace from joint representation subspace calculation. For example, try to use STAD_rank20_joint.txt with columns as markers while rows corresponding to samples.
+6. Input data for DEC: using combination of joint subspace from joint representation subspace calculation. For example, try to use BRCA_rank40_joint.txt with columns as markers while rows corresponding to samples.
 
 7. Output format: the output from MODEC will be clustering labels as numbers. We can map them to the subtype contained in the TCGA dataset to measure the clustering performance. The optimal matching is obtained by applying Hungarian method. The mapping algorithm is provided in the application example using BRCA cohort.
 
