@@ -28,7 +28,7 @@ MODEC is an integrative clustering method utilizing gene-level omics data for ca
 
    Use BRCA cohort for instance, the data preprocessing step is introduced in the application example using BRCA cohort. First read in omics data as Data_brca1, Data_brca2, Data_brca3. After selecting the same samples in all the datasets, drop nan value, normalize datasets and prepare the datasets with columns as markers while rows corresponding to samples, we generate a list including these omics datasets as:
    
-   Data_brca_list = [Data_brca1, Data_brca2, Data_brca3]
+   Data_brca_list = [Data_brcam1, Data_brcam2, Data_brcam3]
    
    Given customized rank r and number of clusters k (using k we can get a silhouette score by applying k-means clustering). Please make sure r is greater or equal to k. We can get the joint subspace, silhouette score and corresponding rank as outputs.
    
