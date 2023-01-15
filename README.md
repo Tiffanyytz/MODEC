@@ -26,7 +26,7 @@ MODEC is an integrative clustering method utilizing gene-level omics data for ca
    
 5. Input data format and example code for joint representation subspace calculation
 
-   Use BRCA cohort for instance, the data preprocessing step is introduced in the application example using BRCA cohort. First read in omics data as Data_brca1, Data_brca2, Data_brca3. After selecting the same samples in all the datasets, drop nan value, normalize datasets and prepare the datasets with columns as markers while rows corresponding to samples, we generate a list including these omics datasets as:
+   Use BRCA cohort for instance, the data preprocessing step is introduced in the application example using BRCA cohort (https://github.com/Tiffanyytz/MODEC/blob/main/Data_preproccessing_step). First read in omics data as Data_brca1, Data_brca2, Data_brca3. After selecting the same samples in all the datasets, drop nan value, normalize datasets and prepare the datasets with columns as markers while rows corresponding to samples, we generate a list including these omics datasets as:
    
    Data_brca_list = [Data_brcam1, Data_brcam2, Data_brcam3]
    
