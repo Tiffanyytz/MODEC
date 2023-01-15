@@ -1,0 +1,53 @@
+import random
+import pandas as pd
+import numpy as np
+from numpy import log2
+
+#three types of omics data from TCGA portal
+#clinical data from TCGA portal
+#subtype data from TCGA BioLinks package
+#read the datasets
+Data_brca1 = pd.read_csv('/Downloads/Human__TCGA_BRCA__UNC__RNAseq__HiSeq_RNA__01_28_2016__BI__Gene__Firehose_RSEM_log2.cct', delimiter="\t")
+Data_brca2 = pd.read_csv('/Downloads/Human__TCGA_BRCA__BDGSC__miRNASeq__GA_miR__01_28_2016__BI__Gene__Firehose_RPKM_log2.cct.txt', delimiter="\t")
+Data_brca3 = pd.read_csv('/Downloads/Human__TCGA_BRCA__JHU_USC__Methylation__Meth27__01_28_2016__BI__Gene__Firehose_Methylation_Prepocessor.cct', delimiter="\t")
+df_clinical = pd.read_csv('/Downloads/Human__TCGA_BRCA__MS__Clinical__Clinical__01_28_2016__BI__Clinical__Firehose.tsi.txt', index_col=0, delimiter='\t')
+df_pam50 = pd.read_csv('/Downloads/BRCA_subtype_biolinks', index_col=0, delimiter=',')\
+
+#keeping samples existing in all the datasets
+#the format of sample ID from different sources is different, consider replacing symbol '.' using ','
+samples_brca_1 = Data_brca1.columns
+samples_brca_2 = Data_brca1[samples_brca_1].columns.intersection(Data_brca2.columns)
+samples_brca_3 = Data_brca1[samples_brca_2].columns.intersection(Data_brca3.columns)
+samples_brca_4 = Data_brca1[samples_brca_3].columns.intersection(df_clinical.columns)
+df_pam50t = df_pam50.transpose()
+new_df  = df_pam50t.rename(columns=df_pam50t.iloc[0])
+new_df = new_df.drop(new_df.index[0])
+list_1 = samples_brca_4
+list_2 = list_1.str.replace('.','-')
+sample_pam50 = new_df.columns.intersection(list_2)
+#samples_omics_final is the list of all the samples preserving for running the algorithm
+samples_omics_final = sample_pam50.str.replace('-','.')
+
+#normalize the gene expression and miRNA data with log2
+#replace all zeros with ones in the dataframe
+#preserve around 5000 variables in methylation and gene expression with larger variance
+Data_brca1 = Data_brca1[samples_omics_final].dropna()
+Data_brca2 = Data_brca2[samples_omics_final].dropna()
+Data_brca3 = Data_brca3[samples_omics_final].dropna()
+Data_brca1 = Data_brca1.replace(0, 1)
+Data_brca2 = Data_brca2.replace(0, 1)
+Data_brca1 = log2(Data_brca1)
+Data_brca2 = log2(Data_brca2)
+Data_brca1 = Data_brca1.transpose()
+Data_brca2 = Data_brca2.transpose()
+Data_brca3 = Data_brca3.transpose()
+#the values used here need to be changed for each cohort to guarantee the number of remained variables
+Data_brca1 = Data_brca1.loc[:, Data_brca1.std() > 0.35]
+Data_brca3 = Data_brca3.loc[:, Data_brca3.std() > 0.1]
+Data_brcam1 = Data_brca1.to_numpy()
+Data_brcam2 = Data_brca2.to_numpy()
+Data_brcam3 = Data_brca3.to_numpy()
+
+#constructing a list as input for algorithm
+#the number of omics can be changed simply
+Data_brca_list = [Data_brcam1, Data_brcam2, Data_brcam3]
