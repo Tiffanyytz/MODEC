@@ -11,7 +11,9 @@ MODEC is an integrative clustering method utilizing gene-level omics data for ca
    (1) Omics and clinical datasets are downloaded from the TCGA portal. https://www.cancer.gov/about-nci/organization/ccg/research/structural-genomics/tcga
    
    a. RNAseq data normalized counts (Illumina HiSeq platform, Gene-level, RPKM)
+   
    b. miRNA expression for tumor samples (Illumina HiSeq platform, Normalized, miRgene-level, RPM)
+   
    c. Methylation data of tumor samples at Gene level (Beta values, Illumina HM27 platform)
    
    (2) TCGA subtype data are downloaded through TCGABiolinks R package. https://bioconductor.org/packages/release/bioc/html/TCGAbiolinks.html
