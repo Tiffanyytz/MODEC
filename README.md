@@ -19,9 +19,13 @@ MODEC is an integrative clustering method utilizing gene-level omics data for ca
    (2) TCGA subtype data are downloaded through TCGABiolinks R package. https://bioconductor.org/packages/release/bioc/html/TCGAbiolinks.html
    
    Run the following code in R to get access to the available subtype datasets, using Breast Cancer cohort for example:
+   
    #load the required package
+   
    library(TCGAbiolinks)
+   
    #get access to the required cancer cohort
+   
    BRCA_path_subtypes <- TCGAquery_subtype(tumor = "brca")
    
 5. Input data format and example code for joint representation subspace calculation
